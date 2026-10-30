@@ -121,12 +121,19 @@
 
   figure img {
     display: block;
-    width: 100%;
+    max-width: 100%;
+    max-height: 62vh;
+    margin: 0 auto;
     height: auto;
     border-radius: 20px;
     box-shadow:
       0 22px 44px -20px rgba(15, 23, 42, 0.5),
       0 2px 8px rgba(15, 23, 42, 0.08);
+    transition: opacity 0.22s ease;
+  }
+
+  figure.is-swapping img {
+    opacity: 0;
   }
 
   @keyframes rise {
@@ -144,48 +151,66 @@
   <main>
     <h1 id="line" role="button" tabindex="0" aria-label="点击切换文字">蕾宝今天也要开心呀！</h1>
     <p class="hint" id="hint">点一下，换一句</p>
-    <figure>
-      <img src="images/photo.webp" alt="照片" />
+    <figure id="photo-wrap">
+      <img id="photo" src="images/photo.webp" alt="照片" />
     </figure>
   </main>
   <footer id="footer"></footer>
 
 <script>
   // 点击后轮流显示的句子：想改内容 / 加句子，改这个数组即可
+  // 图片默认还是放在 images/ 目录下（和之前一样的路径）
+  // 把新图命名为 1.webp、2.webp … 放进 images/ 就会自动生效
+  const IMG_DIR = "images/";
+  const DEFAULT_IMG = IMG_DIR + "photo.webp";
+
+  // 每一句配一张图；img 文件不存在时自动回退到 photo.webp
   const MESSAGES = [
-    "蕾宝今天也要开心呀！",
-    "今天也有一点点小确幸",
-    "愿你被这个世界温柔以待",
-    "别急，慢慢来，一切都来得及",
-    "记得喝水，记得笑",
+    { text: "蕾宝今天也要开心呀！", img: IMG_DIR + "1.webp" },
+    { text: "今天也有一点点小确幸", img: IMG_DIR + "2.webp" },
+    { text: "愿你被这个世界温柔以待", img: IMG_DIR + "3.webp" },
+    { text: "别急，慢慢来，一切都来得及", img: IMG_DIR + "4.webp" },
+    { text: "记得喝水，记得笑", img: IMG_DIR + "5.webp" },
   ];
 
   // 也支持网址传参临时改第一句：https://xxx.com/?t=今天也要开心呀
   const params = new URLSearchParams(location.search);
   const custom = (params.get("t") || params.get("text") || "").trim();
-  const list = custom ? [custom, ...MESSAGES] : MESSAGES;
+  const list = custom ? [{ text: custom, img: DEFAULT_IMG }, ...MESSAGES] : MESSAGES;
 
   const el = document.getElementById("line");
   const hint = document.getElementById("hint");
   const footer = document.getElementById("footer");
+  const wrap = document.getElementById("photo-wrap");
+  const photo = document.getElementById("photo");
 
   let index = 0;
   let busy = false;
 
-  function show(text) {
-    el.textContent = text;
-    document.title = text;
-    footer.textContent = text;
+  // 预加载：图片不存在就回退，避免切换时出现空白
+  list.forEach((item) => {
+    const probe = new Image();
+    probe.onerror = () => { item.img = DEFAULT_IMG; };
+    probe.src = item.img;
+  });
+
+  function show(item) {
+    el.textContent = item.text;
+    if (photo.getAttribute("src") !== item.img) photo.src = item.img;
+    document.title = item.text;
+    footer.textContent = item.text;
   }
 
   function next() {
     if (busy || list.length < 2) return;
     busy = true;
     el.classList.add("is-swapping");
+    wrap.classList.add("is-swapping");
     setTimeout(() => {
       index = (index + 1) % list.length;
       show(list[index]);
       el.classList.remove("is-swapping");
+      wrap.classList.remove("is-swapping");
       busy = false;
     }, 220);
   }
